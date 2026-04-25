@@ -70,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const initializedRef = useRef(false);
+  const processingOAuthRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -82,18 +83,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
 
+    const tokens = readOAuthTokensFromUrl();
+    processingOAuthRef.current = Boolean(tokens);
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (processingOAuthRef.current && !nextSession && !initializedRef.current) {
+        return;
+      }
       applySession(nextSession);
     });
 
     const init = async () => {
-      const tokens = readOAuthTokensFromUrl();
-
       if (tokens) {
         const { error } = await supabase.auth.setSession(tokens);
         if (!error) {
           clearOAuthParamsFromUrl();
         }
+        processingOAuthRef.current = false;
       }
 
       const { data } = await supabase.auth.getSession();
@@ -107,7 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void init();
 
-    return () => sub.subscription.unsubscribe();
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
