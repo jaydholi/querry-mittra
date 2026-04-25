@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,23 +16,102 @@ const Ctx = createContext<AuthCtx>({
   signOut: async () => {},
 });
 
+function readOAuthTokensFromUrl() {
+  if (typeof window === "undefined") return null;
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+  const access_token =
+    hashParams.get("access_token") ?? searchParams.get("access_token");
+  const refresh_token =
+    hashParams.get("refresh_token") ?? searchParams.get("refresh_token");
+
+  if (!access_token || !refresh_token) return null;
+
+  return { access_token, refresh_token };
+}
+
+function clearOAuthParamsFromUrl() {
+  if (typeof window === "undefined") return;
+
+  const url = new URL(window.location.href);
+  const authKeys = [
+    "access_token",
+    "refresh_token",
+    "token_type",
+    "expires_in",
+    "expires_at",
+    "provider_token",
+    "provider_refresh_token",
+    "code",
+    "state",
+    "type",
+  ];
+
+  for (const key of authKeys) {
+    url.searchParams.delete(key);
+  }
+
+  if (url.hash) {
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+    for (const key of authKeys) {
+      hashParams.delete(key);
+    }
+    const nextHash = hashParams.toString();
+    url.hash = nextHash ? `#${nextHash}` : "";
+  }
+
+  window.history.replaceState({}, "", url.toString());
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+    let mounted = true;
+
+    const applySession = (nextSession: Session | null) => {
+      if (!mounted) return;
+      initializedRef.current = true;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
       setLoading(false);
+    };
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      applySession(nextSession);
     });
-    supabase.auth.getSession().then(({ data }) => {
+
+    const init = async () => {
+      const tokens = readOAuthTokensFromUrl();
+
+      if (tokens) {
+        const { error } = await supabase.auth.setSession(tokens);
+        if (!error) {
+          clearOAuthParamsFromUrl();
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
+
+      if (!mounted || initializedRef.current) return;
+
       setSession(data.session);
       setUser(data.session?.user ?? null);
       setLoading(false);
-    });
+    };
+
+    void init();
+
     return () => sub.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   return (
