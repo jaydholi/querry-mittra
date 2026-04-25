@@ -52,7 +52,10 @@ function AuthPage() {
   const handleGoogle = async () => {
     setBusy(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google");
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: typeof window !== "undefined" ? window.location.origin : undefined,
+        extraParams: { prompt: "select_account" },
+      });
       if (result.error) throw result.error;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sign-in failed");
