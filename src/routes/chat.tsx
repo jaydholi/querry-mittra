@@ -97,7 +97,10 @@ function ChatPage() {
   const [renameTarget, setRenameTarget] = useState<ChatSession | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ChatSession | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const settings = useSettings();
+  const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initializedPromptRef = useRef(false);
