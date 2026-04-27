@@ -620,6 +620,89 @@ function ChatPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        onClearChats={clearAllChats}
+      />
+    </div>
+  );
+}
+
+const fontSizeClass: Record<string, string> = {
+  sm: "text-xs",
+  md: "text-sm",
+  lg: "text-base",
+};
+
+function MessageBubble({
+  m,
+  streaming,
+  fontSize,
+  showTimestamp,
+}: {
+  m: ChatMessage;
+  streaming?: boolean;
+  fontSize: "sm" | "md" | "lg";
+  showTimestamp: boolean;
+}) {
+  const isUser = m.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(m.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className={`group flex ${isUser ? "justify-end" : "justify-start"}`}>
+      <div className={`max-w-[88%] sm:max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
+        <div
+          className={`break-words rounded-2xl px-4 py-2.5 leading-relaxed shadow-card ${fontSizeClass[fontSize]} ${
+            isUser
+              ? "bg-brand-gradient text-primary-foreground"
+              : "bg-card text-card-foreground border border-border"
+          }`}
+        >
+          {isUser ? (
+            <div className="whitespace-pre-wrap">{m.content}</div>
+          ) : m.content ? (
+            <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-pre:my-2 prose-pre:bg-muted prose-pre:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-headings:my-2 prose-ul:my-2 prose-ol:my-2">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+            </div>
+          ) : streaming ? (
+            <span className="inline-flex items-center gap-1 text-muted-foreground">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
+            </span>
+          ) : null}
+          {streaming && m.content && (
+            <span className="ml-0.5 inline-block h-3 w-[2px] translate-y-0.5 bg-current animate-blink" />
+          )}
+        </div>
+        <div className="mt-1 flex items-center gap-2 px-1">
+          {showTimestamp && (
+            <span className="text-[10px] text-muted-foreground">
+              {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          {!isUser && m.content && (
+            <button
+              onClick={copy}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+              aria-label="Copy"
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
