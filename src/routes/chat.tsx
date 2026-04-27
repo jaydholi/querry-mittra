@@ -14,12 +14,21 @@ import {
   FileText,
   FileDown,
   Loader2,
+  Settings as SettingsIcon,
+  Copy,
+  RefreshCw,
+  Check,
+  StopCircle,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
+import { useSettings, playBeep } from "@/lib/settings-context";
+import { SettingsDialog } from "@/components/settings-dialog";
 import { Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -88,7 +97,10 @@ function ChatPage() {
   const [renameTarget, setRenameTarget] = useState<ChatSession | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ChatSession | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const settings = useSettings();
+  const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const initializedPromptRef = useRef(false);
@@ -205,10 +217,8 @@ function ChatPage() {
     }
   };
 
-  const send = async () => {
-    const content = input.trim();
+  const sendMessage = async (content: string) => {
     if (!content || !activeId || busy) return;
-    setInput("");
     setBusy(true);
 
     const tempUserMsg: ChatMessage = {
@@ -225,32 +235,84 @@ function ChatPage() {
     };
     setMessages((prev) => [...prev, tempUserMsg, tempAsstMsg]);
 
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     try {
       let acc = "";
-      await streamChat(activeId, content, (chunk) => {
-        acc += chunk;
-        setMessages((prev) =>
-          prev.map((m) => (m.id === tempAsstMsg.id ? { ...m, content: acc } : m)),
-        );
-      });
-      // Refresh session list to get updated title/order
+      await streamChat(
+        activeId,
+        content,
+        (chunk) => {
+          acc += chunk;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempAsstMsg.id ? { ...m, content: acc } : m)),
+          );
+        },
+        ctrl.signal,
+      );
       const list = await listSessions();
       setSessions(list);
-      // Reload messages from server to get permanent IDs
       const ms = await listMessages(activeId);
       setMessages(ms);
+      if (settings.soundOn) playBeep();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to send";
-      toast.error(msg);
-      setMessages((prev) => prev.filter((m) => m.id !== tempAsstMsg.id));
+      const isAbort = (e as Error)?.name === "AbortError";
+      if (isAbort) {
+        toast.info("Stopped");
+      } else {
+        const msg = e instanceof Error ? e.message : "Failed to send";
+        toast.error(msg);
+        setMessages((prev) => prev.filter((m) => m.id !== tempAsstMsg.id));
+      }
     } finally {
       setBusy(false);
+      abortRef.current = null;
       textareaRef.current?.focus();
     }
   };
 
+  const send = async () => {
+    const content = input.trim();
+    if (!content) return;
+    setInput("");
+    await sendMessage(content);
+  };
+
+  const stop = () => {
+    abortRef.current?.abort();
+  };
+
+  const regenerate = async () => {
+    if (busy || messages.length === 0) return;
+    // find last user message
+    const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === "user");
+    if (lastUserIdx === -1) return;
+    const idx = messages.length - 1 - lastUserIdx;
+    const userMsg = messages[idx];
+    // trim to before last user turn so server reprocesses
+    setMessages(messages.slice(0, idx));
+    await sendMessage(userMsg.content);
+  };
+
+  const clearAllChats = async () => {
+    try {
+      for (const s of sessions) {
+        await deleteSession(s.id);
+      }
+      const fresh = await createSession();
+      setSessions([fresh]);
+      setActiveId(fresh.id);
+      setMessages([]);
+      toast.success("All chats cleared");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to clear");
+    }
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    const enterSends = settings.enterToSend ? !e.shiftKey : e.shiftKey;
+    if (e.key === "Enter" && enterSends) {
       e.preventDefault();
       send();
     }
@@ -378,6 +440,9 @@ function ChatPage() {
                 {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
                 Toggle theme
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                <SettingsIcon className="mr-2 h-4 w-4" /> Settings
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={async () => {
@@ -407,6 +472,16 @@ function ChatPage() {
             <Menu className="h-5 w-5" />
           </Button>
           <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{activeSession?.title ?? "Chat"}</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={regenerate}
+            disabled={busy || messages.length === 0}
+            aria-label="Regenerate"
+            title="Regenerate response"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" disabled={messages.length === 0} aria-label="Export">
@@ -430,6 +505,9 @@ function ChatPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Settings">
+            <SettingsIcon className="h-4 w-4" />
+          </Button>
         </header>
 
         <div ref={scrollRef} className="scrollbar-thin flex-1 overflow-y-auto">
@@ -448,7 +526,13 @@ function ChatPage() {
             ) : (
               <div className="space-y-4">
                 {messages.map((m) => (
-                  <MessageBubble key={m.id} m={m} streaming={busy && m === messages[messages.length - 1] && m.role === "assistant"} />
+                  <MessageBubble
+                    key={m.id}
+                    m={m}
+                    streaming={busy && m === messages[messages.length - 1] && m.role === "assistant"}
+                    fontSize={settings.fontSize}
+                    showTimestamp={settings.showTimestamps}
+                  />
                 ))}
               </div>
             )}
@@ -469,18 +553,31 @@ function ChatPage() {
                 maxLength={4000}
                 className="max-h-40 min-h-[40px] resize-none border-0 bg-transparent focus-visible:ring-0"
               />
-              <Button
-                onClick={send}
-                disabled={busy || !input.trim()}
-                size="icon"
-                className="h-10 w-10 shrink-0 bg-brand-gradient text-primary-foreground hover:opacity-90"
-                aria-label="Send"
-              >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
+              {busy ? (
+                <Button
+                  onClick={stop}
+                  size="icon"
+                  variant="destructive"
+                  className="h-10 w-10 shrink-0"
+                  aria-label="Stop"
+                  title="Stop generating"
+                >
+                  <StopCircle className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={send}
+                  disabled={!input.trim()}
+                  size="icon"
+                  className="h-10 w-10 shrink-0 bg-brand-gradient text-primary-foreground hover:opacity-90"
+                  aria-label="Send"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <p className="mt-2 text-center text-[10px] text-muted-foreground">
-              Querry Mittra can make mistakes. Verify important info.
+              {settings.enterToSend ? "Enter to send · Shift+Enter for newline" : "Shift+Enter to send"} · Querry Mittra can make mistakes.
             </p>
           </div>
         </div>
@@ -523,28 +620,88 @@ function ChatPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        onClearChats={clearAllChats}
+      />
     </div>
   );
 }
 
-function MessageBubble({ m, streaming }: { m: ChatMessage; streaming?: boolean }) {
+const fontSizeClass: Record<string, string> = {
+  sm: "text-xs",
+  md: "text-sm",
+  lg: "text-base",
+};
+
+function MessageBubble({
+  m,
+  streaming,
+  fontSize,
+  showTimestamp,
+}: {
+  m: ChatMessage;
+  streaming?: boolean;
+  fontSize: "sm" | "md" | "lg";
+  showTimestamp: boolean;
+}) {
   const isUser = m.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(m.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* ignore */ }
+  };
+
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`group flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[88%] sm:max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
         <div
-          className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-card ${
+          className={`break-words rounded-2xl px-4 py-2.5 leading-relaxed shadow-card ${fontSizeClass[fontSize]} ${
             isUser
               ? "bg-brand-gradient text-primary-foreground"
               : "bg-card text-card-foreground border border-border"
           }`}
         >
-          {m.content || (streaming ? "…" : "")}
-          {streaming && <span className="ml-0.5 inline-block h-3 w-[2px] translate-y-0.5 bg-current animate-blink" />}
+          {isUser ? (
+            <div className="whitespace-pre-wrap">{m.content}</div>
+          ) : m.content ? (
+            <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-pre:my-2 prose-pre:bg-muted prose-pre:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none prose-headings:my-2 prose-ul:my-2 prose-ol:my-2">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+            </div>
+          ) : streaming ? (
+            <span className="inline-flex items-center gap-1 text-muted-foreground">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
+            </span>
+          ) : null}
+          {streaming && m.content && (
+            <span className="ml-0.5 inline-block h-3 w-[2px] translate-y-0.5 bg-current animate-blink" />
+          )}
         </div>
-        <span className="mt-1 px-1 text-[10px] text-muted-foreground">
-          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </span>
+        <div className="mt-1 flex items-center gap-2 px-1">
+          {showTimestamp && (
+            <span className="text-[10px] text-muted-foreground">
+              {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          {!isUser && m.content && (
+            <button
+              onClick={copy}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+              aria-label="Copy"
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

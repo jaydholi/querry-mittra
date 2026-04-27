@@ -2,6 +2,8 @@ import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/r
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
+import { SettingsProvider } from "@/lib/settings-context";
+import { AppBoot } from "@/components/app-boot";
 
 import appCss from "../styles.css?url";
 
@@ -64,10 +66,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <Outlet />
-        <Toaster richColors position="top-center" />
-      </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <AppBoot>
+            <Outlet />
+          </AppBoot>
+          <Toaster richColors position="top-center" />
+        </AuthProvider>
+      </SettingsProvider>
     </ThemeProvider>
   );
 }
