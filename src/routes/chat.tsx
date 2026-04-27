@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -355,10 +356,8 @@ function ChatPage() {
       >
         <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-3">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-gradient shadow-glow">
-              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
-            </div>
-            <span className="text-sm font-semibold">Querry Mittra</span>
+            <img src={logo} alt="Query Mittra" className="h-7 w-7 object-contain" />
+            <span className="text-sm font-semibold">Query Mittra</span>
           </Link>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="h-4 w-4" />

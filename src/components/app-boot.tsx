@@ -1,7 +1,7 @@
 import { useEffect, useState, ReactNode } from "react";
 import { SplashScreen } from "@/components/splash-screen";
 
-const KEY = "qm-splash-shown";
+const KEY = "qm-splash-shown-v2";
 
 export function AppBoot({ children }: { children: ReactNode }) {
   const [show, setShow] = useState(false);
