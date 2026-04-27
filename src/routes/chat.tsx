@@ -526,7 +526,13 @@ function ChatPage() {
             ) : (
               <div className="space-y-4">
                 {messages.map((m) => (
-                  <MessageBubble key={m.id} m={m} streaming={busy && m === messages[messages.length - 1] && m.role === "assistant"} />
+                  <MessageBubble
+                    key={m.id}
+                    m={m}
+                    streaming={busy && m === messages[messages.length - 1] && m.role === "assistant"}
+                    fontSize={settings.fontSize}
+                    showTimestamp={settings.showTimestamps}
+                  />
                 ))}
               </div>
             )}
@@ -547,18 +553,31 @@ function ChatPage() {
                 maxLength={4000}
                 className="max-h-40 min-h-[40px] resize-none border-0 bg-transparent focus-visible:ring-0"
               />
-              <Button
-                onClick={send}
-                disabled={busy || !input.trim()}
-                size="icon"
-                className="h-10 w-10 shrink-0 bg-brand-gradient text-primary-foreground hover:opacity-90"
-                aria-label="Send"
-              >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
+              {busy ? (
+                <Button
+                  onClick={stop}
+                  size="icon"
+                  variant="destructive"
+                  className="h-10 w-10 shrink-0"
+                  aria-label="Stop"
+                  title="Stop generating"
+                >
+                  <StopCircle className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={send}
+                  disabled={!input.trim()}
+                  size="icon"
+                  className="h-10 w-10 shrink-0 bg-brand-gradient text-primary-foreground hover:opacity-90"
+                  aria-label="Send"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <p className="mt-2 text-center text-[10px] text-muted-foreground">
-              Querry Mittra can make mistakes. Verify important info.
+              {settings.enterToSend ? "Enter to send · Shift+Enter for newline" : "Shift+Enter to send"} · Querry Mittra can make mistakes.
             </p>
           </div>
         </div>
