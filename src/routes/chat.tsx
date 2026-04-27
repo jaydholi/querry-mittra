@@ -217,10 +217,8 @@ function ChatPage() {
     }
   };
 
-  const send = async () => {
-    const content = input.trim();
+  const sendMessage = async (content: string) => {
     if (!content || !activeId || busy) return;
-    setInput("");
     setBusy(true);
 
     const tempUserMsg: ChatMessage = {
@@ -237,32 +235,84 @@ function ChatPage() {
     };
     setMessages((prev) => [...prev, tempUserMsg, tempAsstMsg]);
 
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     try {
       let acc = "";
-      await streamChat(activeId, content, (chunk) => {
-        acc += chunk;
-        setMessages((prev) =>
-          prev.map((m) => (m.id === tempAsstMsg.id ? { ...m, content: acc } : m)),
-        );
-      });
-      // Refresh session list to get updated title/order
+      await streamChat(
+        activeId,
+        content,
+        (chunk) => {
+          acc += chunk;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempAsstMsg.id ? { ...m, content: acc } : m)),
+          );
+        },
+        ctrl.signal,
+      );
       const list = await listSessions();
       setSessions(list);
-      // Reload messages from server to get permanent IDs
       const ms = await listMessages(activeId);
       setMessages(ms);
+      if (settings.soundOn) playBeep();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to send";
-      toast.error(msg);
-      setMessages((prev) => prev.filter((m) => m.id !== tempAsstMsg.id));
+      const isAbort = (e as Error)?.name === "AbortError";
+      if (isAbort) {
+        toast.info("Stopped");
+      } else {
+        const msg = e instanceof Error ? e.message : "Failed to send";
+        toast.error(msg);
+        setMessages((prev) => prev.filter((m) => m.id !== tempAsstMsg.id));
+      }
     } finally {
       setBusy(false);
+      abortRef.current = null;
       textareaRef.current?.focus();
     }
   };
 
+  const send = async () => {
+    const content = input.trim();
+    if (!content) return;
+    setInput("");
+    await sendMessage(content);
+  };
+
+  const stop = () => {
+    abortRef.current?.abort();
+  };
+
+  const regenerate = async () => {
+    if (busy || messages.length === 0) return;
+    // find last user message
+    const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === "user");
+    if (lastUserIdx === -1) return;
+    const idx = messages.length - 1 - lastUserIdx;
+    const userMsg = messages[idx];
+    // trim to before last user turn so server reprocesses
+    setMessages(messages.slice(0, idx));
+    await sendMessage(userMsg.content);
+  };
+
+  const clearAllChats = async () => {
+    try {
+      for (const s of sessions) {
+        await deleteSession(s.id);
+      }
+      const fresh = await createSession();
+      setSessions([fresh]);
+      setActiveId(fresh.id);
+      setMessages([]);
+      toast.success("All chats cleared");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to clear");
+    }
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    const enterSends = settings.enterToSend ? !e.shiftKey : e.shiftKey;
+    if (e.key === "Enter" && enterSends) {
       e.preventDefault();
       send();
     }
