@@ -14,12 +14,21 @@ import {
   FileText,
   FileDown,
   Loader2,
+  Settings as SettingsIcon,
+  Copy,
+  RefreshCw,
+  Check,
+  StopCircle,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
+import { useSettings, playBeep } from "@/lib/settings-context";
+import { SettingsDialog } from "@/components/settings-dialog";
 import { Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 import {
