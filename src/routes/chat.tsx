@@ -706,26 +706,3 @@ function MessageBubble({
     </div>
   );
 }
-
-function MessageBubble({ m, streaming }: { m: ChatMessage; streaming?: boolean }) {
-  const isUser = m.role === "user";
-  return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[88%] sm:max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col`}>
-        <div
-          className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-card ${
-            isUser
-              ? "bg-brand-gradient text-primary-foreground"
-              : "bg-card text-card-foreground border border-border"
-          }`}
-        >
-          {m.content || (streaming ? "…" : "")}
-          {streaming && <span className="ml-0.5 inline-block h-3 w-[2px] translate-y-0.5 bg-current animate-blink" />}
-        </div>
-        <span className="mt-1 px-1 text-[10px] text-muted-foreground">
-          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </span>
-      </div>
-    </div>
-  );
-}
