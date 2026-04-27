@@ -472,6 +472,16 @@ function ChatPage() {
             <Menu className="h-5 w-5" />
           </Button>
           <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{activeSession?.title ?? "Chat"}</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={regenerate}
+            disabled={busy || messages.length === 0}
+            aria-label="Regenerate"
+            title="Regenerate response"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" disabled={messages.length === 0} aria-label="Export">
@@ -495,6 +505,9 @@ function ChatPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button variant="ghost" size="icon" onClick={() => setSettingsOpen(true)} aria-label="Settings">
+            <SettingsIcon className="h-4 w-4" />
+          </Button>
         </header>
 
         <div ref={scrollRef} className="scrollbar-thin flex-1 overflow-y-auto">
