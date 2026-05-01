@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,7 +31,6 @@ export const Route = createFileRoute("/auth/callback")({
 });
 
 function AuthCallbackPage() {
-  const navigate = useNavigate();
   const search = Route.useSearch();
   const [statusText, setStatusText] = useState("Completing sign-in...");
 
@@ -75,16 +74,13 @@ function AuthCallbackPage() {
         if (!active) return;
         const message = error instanceof Error ? error.message : "Sign-in failed";
         toast.error(message);
-        navigate(
-          {
-            to: "/auth",
-            search: {
-              next: search.next,
-              prompt: search.prompt,
-            },
-            replace: true,
-          } as never,
-        );
+        window.location.replace(`/auth${new URLSearchParams({
+          ...(search.next ? { next: search.next } : {}),
+          ...(search.prompt ? { prompt: search.prompt } : {}),
+        }).toString() ? `?${new URLSearchParams({
+          ...(search.next ? { next: search.next } : {}),
+          ...(search.prompt ? { prompt: search.prompt } : {}),
+        }).toString()}` : ""}`);
       }
     };
 

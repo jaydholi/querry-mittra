@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,6 @@ const passwordSchema = z.string().min(6).max(100);
 function AuthPage() {
   const { user, loading, isAuthCallback } = useAuth();
   const search = Route.useSearch();
-  const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +48,7 @@ function AuthPage() {
       });
       window.location.replace(destination);
     }
-  }, [user, loading, isAuthCallback, navigate, search.next, search.prompt]);
+  }, [user, loading, isAuthCallback, search.next, search.prompt]);
 
   const handleGoogle = async () => {
     setBusy(true);
