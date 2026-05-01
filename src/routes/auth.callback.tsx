@@ -30,6 +30,14 @@ export const Route = createFileRoute("/auth/callback")({
   component: AuthCallbackPage,
 });
 
+function buildAuthRetryUrl(next?: string, prompt?: string) {
+  const params = new URLSearchParams();
+  if (next) params.set("next", next);
+  if (prompt) params.set("prompt", prompt);
+  const query = params.toString();
+  return query ? `/auth?${query}` : "/auth";
+}
+
 function AuthCallbackPage() {
   const search = Route.useSearch();
   const [statusText, setStatusText] = useState("Completing sign-in...");
@@ -74,13 +82,7 @@ function AuthCallbackPage() {
         if (!active) return;
         const message = error instanceof Error ? error.message : "Sign-in failed";
         toast.error(message);
-        window.location.replace(`/auth${new URLSearchParams({
-          ...(search.next ? { next: search.next } : {}),
-          ...(search.prompt ? { prompt: search.prompt } : {}),
-        }).toString() ? `?${new URLSearchParams({
-          ...(search.next ? { next: search.next } : {}),
-          ...(search.prompt ? { prompt: search.prompt } : {}),
-        }).toString()}` : ""}`);
+        window.location.replace(buildAuthRetryUrl(search.next, search.prompt));
       }
     };
 
@@ -89,7 +91,7 @@ function AuthCallbackPage() {
     return () => {
       active = false;
     };
-  }, [destination, navigate, search.error, search.error_description, search.next, search.prompt, search.code]);
+  }, [destination, search.error, search.error_description, search.next, search.prompt, search.code]);
 
   return (
     <div className="min-h-screen bg-background bg-hero-gradient">
