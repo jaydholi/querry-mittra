@@ -47,7 +47,7 @@ function AuthPage() {
         next: search.next,
         prompt: search.prompt,
       });
-      navigate({ to: destination, replace: true } as never);
+      window.location.replace(destination);
     }
   }, [user, loading, isAuthCallback, navigate, search.next, search.prompt]);
 
@@ -69,10 +69,9 @@ function AuthPage() {
       });
       if (result.error) throw result.error;
       if (!result.redirected) {
-        navigate({
-          to: getPostAuthRedirectPath({ next: search.next, prompt: search.prompt }),
-          replace: true,
-        } as never);
+        window.location.replace(
+          getPostAuthRedirectPath({ next: search.next, prompt: search.prompt }),
+        );
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sign-in failed");
@@ -96,7 +95,14 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+            emailRedirectTo:
+              typeof window !== "undefined"
+                ? buildAuthCallbackUrl({
+                    origin: window.location.origin,
+                    next: getSafeNextPath(search.next, "/chat"),
+                    prompt: search.prompt,
+                  })
+                : undefined,
             data: { full_name: name || email.split("@")[0] },
           },
         });
