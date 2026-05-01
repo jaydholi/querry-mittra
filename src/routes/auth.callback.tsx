@@ -70,7 +70,7 @@ function AuthCallbackPage() {
         if (!data.user) throw new Error("We could not complete your sign-in. Please try again.");
 
         if (!active) return;
-        navigate({ to: destination, replace: true } as never);
+        window.location.replace(destination);
       } catch (error) {
         if (!active) return;
         const message = error instanceof Error ? error.message : "Sign-in failed";
