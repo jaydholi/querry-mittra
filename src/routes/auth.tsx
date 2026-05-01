@@ -10,8 +10,9 @@ import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import { buildAuthCallbackUrl, getPostAuthRedirectPath, getSafeNextPath } from "@/lib/auth-redirect";
 
-type AuthSearch = { prompt?: string };
+type AuthSearch = { prompt?: string; next?: string };
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/auth")({
   }),
   validateSearch: (s: Record<string, unknown>): AuthSearch => ({
     prompt: typeof s.prompt === "string" ? s.prompt : undefined,
+    next: typeof s.next === "string" ? s.next : undefined,
   }),
   component: AuthPage,
 });
@@ -30,7 +32,7 @@ const emailSchema = z.string().trim().email().max(255);
 const passwordSchema = z.string().min(6).max(100);
 
 function AuthPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthCallback } = useAuth();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -40,23 +42,38 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) {
-      navigate({
-        to: "/chat",
-        search: search.prompt ? { prompt: search.prompt } : undefined,
-        replace: true,
+    if (!loading && user && !isAuthCallback) {
+      const destination = getPostAuthRedirectPath({
+        next: search.next,
+        prompt: search.prompt,
       });
+      navigate({ to: destination, replace: true } as never);
     }
-  }, [user, loading, navigate, search.prompt]);
+  }, [user, loading, isAuthCallback, navigate, search.next, search.prompt]);
 
   const handleGoogle = async () => {
     setBusy(true);
     try {
+      const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+      const redirectUri = origin
+        ? buildAuthCallbackUrl({
+            origin,
+            next: getSafeNextPath(search.next, "/chat"),
+            prompt: search.prompt,
+          })
+        : undefined;
+
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: typeof window !== "undefined" ? window.location.origin : undefined,
+        redirect_uri: redirectUri,
         extraParams: { prompt: "select_account" },
       });
       if (result.error) throw result.error;
+      if (!result.redirected) {
+        navigate({
+          to: getPostAuthRedirectPath({ next: search.next, prompt: search.prompt }),
+          replace: true,
+        } as never);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sign-in failed");
       setBusy(false);
