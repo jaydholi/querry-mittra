@@ -6,6 +6,7 @@ type AuthCtx = {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isAuthCallback: boolean;
   signOut: () => Promise<void>;
 };
 
@@ -13,6 +14,7 @@ const Ctx = createContext<AuthCtx>({
   user: null,
   session: null,
   loading: true,
+  isAuthCallback: false,
   signOut: async () => {},
 });
 
@@ -69,11 +71,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthCallback, setIsAuthCallback] = useState(false);
   const initializedRef = useRef(false);
   const processingOAuthRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
+    const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+    const runningAuthCallback = pathname === "/auth/callback";
+    setIsAuthCallback(runningAuthCallback);
 
     const applySession = (nextSession: Session | null) => {
       if (!mounted) return;
@@ -125,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         loading,
+        isAuthCallback,
         signOut: async () => {
           await supabase.auth.signOut();
         },

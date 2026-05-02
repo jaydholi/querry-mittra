@@ -67,6 +67,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { exportAsPdf, exportAsText } from "@/lib/export";
+import { getSafeNextPath } from "@/lib/auth-redirect";
 
 type ChatSearch = { prompt?: string };
 
@@ -107,7 +108,11 @@ function ChatPage() {
   const initializedPromptRef = useRef(false);
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", replace: true });
+    if (!loading && !user) navigate({
+        to: "/auth",
+        search: { next: getSafeNextPath(window.location.pathname + window.location.search, window.location.pathname) },
+        replace: true,
+      });
   }, [loading, user, navigate]);
 
   // Load sessions on auth ready

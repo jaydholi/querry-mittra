@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { getSafeNextPath } from "@/lib/auth-redirect";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,7 +44,11 @@ function ProfilePage() {
   const [busy, setBusy] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", replace: true });
+    if (!loading && !user) navigate({
+        to: "/auth",
+        search: { next: getSafeNextPath(window.location.pathname + window.location.search, window.location.pathname) },
+        replace: true,
+      });
   }, [loading, user, navigate]);
 
   useEffect(() => {
