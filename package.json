@@ -10,6 +10,7 @@
     "build:node": "BUILD_TARGET=node vite build",
     "build:hostinger": "BUILD_TARGET=node vite build",
     "preview": "vite preview",
+    "postinstall": "if [ \"$SKIP_BUILD\" != \"1\" ] && [ ! -f .output/server/index.mjs ]; then BUILD_TARGET=node vite build; fi",
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."
