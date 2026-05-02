@@ -31,14 +31,19 @@ hPanel → **Advanced → Git** → Create new repository:
 - Install path: **same path** as the Node.js application root above
 - Enable **Auto-Deployment** (uses a webhook so each `git push` redeploys)
 
-After cloning, go back to **Node.js** and click **Run NPM Install**.
-That triggers `npm install`, which automatically runs `npm run build`
-(via the `postinstall` script in `package.json`) and produces `.output/`.
+After cloning, in the Node.js panel:
+1. Add an environment variable `HOSTINGER=1` (this enables the auto-build hook for the Node target).
+2. Click **Run NPM Install**. The `postinstall` script then runs `vite build` with `BUILD_TARGET=node` and produces `.output/`.
+
+Alternatively, run `npm run build:hostinger` manually from the panel's terminal after install.
 
 ## 4. Environment variables
 
-hPanel → Node.js → **Environment variables**. Add anything your server
-functions read at runtime, e.g.:
+hPanel → Node.js → **Environment variables**. Required:
+
+- `HOSTINGER=1` (enables Node SSR auto-build)
+
+Plus anything your server functions read at runtime, e.g.:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY` (if used)
