@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "BUILD_TARGET=node vite build",
+    "build:dev": "BUILD_TARGET=node vite build --mode development",
     "build:node": "BUILD_TARGET=node vite build",
     "build:hostinger": "BUILD_TARGET=node vite build",
     "preview": "vite preview",

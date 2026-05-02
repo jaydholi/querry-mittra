@@ -16,7 +16,7 @@ Locally:
 
 ```bash
 npm install
-npm run build:hostinger
+npm run build
 ```
 
 This produces a Node-compatible SSR bundle in `.output/`.
@@ -44,7 +44,7 @@ You do **not** need to upload `src/`, `node_modules/`, or build tooling.
 Then set the start command (or "npm start" equivalent) to:
 
 ```bash
-node .output/server/index.mjs
+npm start
 ```
 
 ## 4. Environment variables
