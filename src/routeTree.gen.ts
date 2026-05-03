@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ApiChatRouteImport } from './routes/api.chat'
+import { Route as AdminDiagnosticsRouteImport } from './routes/admin.diagnostics'
 
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
@@ -46,12 +47,18 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDiagnosticsRoute = AdminDiagnosticsRouteImport.update({
+  id: '/admin/diagnostics',
+  path: '/admin/diagnostics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/chat': typeof ChatRoute
   '/profile': typeof ProfileRoute
+  '/admin/diagnostics': typeof AdminDiagnosticsRoute
   '/api/chat': typeof ApiChatRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/chat': typeof ChatRoute
   '/profile': typeof ProfileRoute
+  '/admin/diagnostics': typeof AdminDiagnosticsRoute
   '/api/chat': typeof ApiChatRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/chat': typeof ChatRoute
   '/profile': typeof ProfileRoute
+  '/admin/diagnostics': typeof AdminDiagnosticsRoute
   '/api/chat': typeof ApiChatRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
@@ -79,16 +88,25 @@ export interface FileRouteTypes {
     | '/auth'
     | '/chat'
     | '/profile'
+    | '/admin/diagnostics'
     | '/api/chat'
     | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/chat' | '/profile' | '/api/chat' | '/auth/callback'
+  to:
+    | '/'
+    | '/auth'
+    | '/chat'
+    | '/profile'
+    | '/admin/diagnostics'
+    | '/api/chat'
+    | '/auth/callback'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/chat'
     | '/profile'
+    | '/admin/diagnostics'
     | '/api/chat'
     | '/auth/callback'
   fileRoutesById: FileRoutesById
@@ -98,6 +116,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   ChatRoute: typeof ChatRoute
   ProfileRoute: typeof ProfileRoute
+  AdminDiagnosticsRoute: typeof AdminDiagnosticsRoute
   ApiChatRoute: typeof ApiChatRoute
 }
 
@@ -145,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/diagnostics': {
+      id: '/admin/diagnostics'
+      path: '/admin/diagnostics'
+      fullPath: '/admin/diagnostics'
+      preLoaderRoute: typeof AdminDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -163,6 +189,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   ChatRoute: ChatRoute,
   ProfileRoute: ProfileRoute,
+  AdminDiagnosticsRoute: AdminDiagnosticsRoute,
   ApiChatRoute: ApiChatRoute,
 }
 export const routeTree = rootRouteImport
