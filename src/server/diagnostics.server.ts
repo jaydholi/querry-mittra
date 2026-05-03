@@ -20,9 +20,8 @@ const MAX_ENTRIES = 100;
 const buffer: DiagEntry[] = [];
 let installed = false;
 
+import { getBuildTarget, logEnvStatus } from "./env.server";
 export { getBuildTarget } from "./env.server";
-import { getBuildTarget as _getBuildTarget, logEnvStatus } from "./env.server";
-// Log env status once on first server-side import.
 try { logEnvStatus(); } catch { /* never block startup on logging */ }
 
 const MODULE_PATTERNS: RegExp[] = [
