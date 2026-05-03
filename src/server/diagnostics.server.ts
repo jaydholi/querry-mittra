@@ -20,12 +20,9 @@ const MAX_ENTRIES = 100;
 const buffer: DiagEntry[] = [];
 let installed = false;
 
-export function getBuildTarget(): string {
-  if (process.env.BUILD_TARGET) return process.env.BUILD_TARGET;
-  if (process.env.HOSTINGER === "1") return "node (hostinger)";
-  if (process.env.CF_PAGES || process.env.CLOUDFLARE_WORKERS) return "cloudflare";
-  return process.env.NODE_ENV === "production" ? "node" : "node (dev)";
-}
+import { getBuildTarget, logEnvStatus } from "./env.server";
+export { getBuildTarget } from "./env.server";
+try { logEnvStatus(); } catch { /* never block startup on logging */ }
 
 const MODULE_PATTERNS: RegExp[] = [
   /Cannot find module ['"`]([^'"`]+)['"`]/i,
