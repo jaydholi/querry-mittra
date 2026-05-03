@@ -12,6 +12,11 @@ export type DiagnosticsPayload = {
   nodeVersion: string;
   uptimeSeconds: number;
   entries: DiagEntry[];
+  memory: {
+    rssMb: number;
+    heapUsedMb: number;
+    heapTotalMb: number;
+  };
   env: {
     hasSupabaseUrl: boolean;
     hasSupabasePublishableKey: boolean;
@@ -22,12 +27,23 @@ export type DiagnosticsPayload = {
 
 export const getDiagnostics = createServerFn({ method: "GET" }).handler(
   async (): Promise<DiagnosticsPayload> => {
+    let memory = { rssMb: 0, heapUsedMb: 0, heapTotalMb: 0 };
+    try {
+      const m = process.memoryUsage();
+      memory = {
+        rssMb: +(m.rss / 1024 / 1024).toFixed(1),
+        heapUsedMb: +(m.heapUsed / 1024 / 1024).toFixed(1),
+        heapTotalMb: +(m.heapTotal / 1024 / 1024).toFixed(1),
+      };
+    } catch { /* runtime may not support */ }
+
     return {
       buildTarget: getBuildTarget(),
       nodeVersion: typeof process !== "undefined" ? process.version : "unknown",
       uptimeSeconds:
         typeof process?.uptime === "function" ? Math.floor(process.uptime()) : 0,
       entries: listEntries(),
+      memory,
       env: {
         hasSupabaseUrl: !!process.env.SUPABASE_URL,
         hasSupabasePublishableKey: !!process.env.SUPABASE_PUBLISHABLE_KEY,
