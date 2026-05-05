@@ -64,7 +64,11 @@ function AuthCallbackPage() {
 
         if (hasOAuthCode) {
           setStatusText("Verifying your sign-in...");
-          const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          const authCode = search.code || url.searchParams.get("code");
+          if (!authCode) {
+            throw new Error("Missing OAuth code in callback.");
+          }
+          const { error } = await supabase.auth.exchangeCodeForSession(authCode);
           if (error) throw error;
         } else if (hasTokenFragment) {
           setStatusText("Restoring your session...");
