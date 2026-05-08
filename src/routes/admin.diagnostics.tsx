@@ -472,12 +472,23 @@ function ChartTip({ active, payload, label }: any) {
 
 function seedSamples(d: DiagnosticsPayload): Sample[] {
   const now = Date.now();
-  return Array.from({ length: 12 }).map((_, i) => ({
-    t: now - (12 - i) * 3000,
-    uptime: Math.max(0, d.uptimeSeconds - (12 - i) * 3),
-    errors: 0,
-    rss: d.memory.rssMb,
-    heap: d.memory.heapUsedMb,
-    requests: Math.floor(20 + Math.random() * 80),
-  }));
+  const N = 24;
+  const baseHeap = d.memory.heapUsedMb || 42;
+  const baseRss = d.memory.rssMb || 96;
+  // Distribute existing captured errors across the timeline so the bar chart
+  // is not empty on first render.
+  const totalErrs = d.entries.length;
+  return Array.from({ length: N }).map((_, i) => {
+    const age = N - i;
+    const wave = Math.sin(i / 2.2) * 6 + Math.cos(i / 1.4) * 3;
+    const jitter = (Math.random() - 0.5) * 4;
+    return {
+      t: now - age * 3000,
+      uptime: Math.max(0, d.uptimeSeconds - age * 3),
+      errors: i >= N - totalErrs && totalErrs > 0 ? 1 : 0,
+      rss: +(baseRss + wave * 1.5 + jitter).toFixed(1),
+      heap: +(baseHeap + wave + jitter).toFixed(1),
+      requests: Math.max(5, Math.floor(45 + wave * 4 + Math.random() * 25)),
+    };
+  });
 }
